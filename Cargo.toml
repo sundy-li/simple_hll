@@ -1,12 +1,24 @@
 [package]
-authors = ["Xuanwo <github@xuanwo.io>>"]
+authors = ["sundyli <543950155@qq.com>>"]
 categories = ["command-line-utilities"]
-description = "Replace with description"
-documentation = "https://docs.rs/formwork"
-repository = "https://github.com/Xuanwo/formwork"
+description = "A simple HyperLogLog implementation in rust"
+documentation = "https://docs.rs/simple_hll"
+repository = "https://github.com/sundy-li/simple_hll"
 edition = "2021"
 license = "Apache-2.0"
-name = "formwork"
+name = "simple_hll"
 version = "0.0.1"
 
+
+[features]
+default = []
+serde_borsh = ["borsh", "serde"]
+
 [dependencies]
+ahash = "0.8"
+serde = { version = "^1.0", features = ["derive"], optional = true}
+borsh = { version = "1.2.1", features = ["derive"], optional = true}
+
+
+[dev-dependencies]
+serde_json = "1.0"

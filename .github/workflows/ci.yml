@@ -48,7 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Test
-        run: cargo test --all-targets --workspace
+        run: cargo test --all-features --all-targets --workspace
         env:
           RUST_LOG: DEBUG
           RUST_BACKTRACE: full
