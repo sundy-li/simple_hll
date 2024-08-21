@@ -18,12 +18,12 @@ const DEFAULT_P: usize = 14_usize;
 /// Register num is 1 << P
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
-pub struct HyperLogLog<H, const P: usize = DEFAULT_P> {
+pub struct HyperLogLog<H=AHasher, const P: usize = DEFAULT_P> {
     pub(crate) registers: Vec<u8>,
     _hasher: std::marker::PhantomData<H>,
 }
 
-impl<const P: usize> Default for HyperLogLog<AHasher, P> {
+impl<H:  Default + Hasher, const P: usize> Default for HyperLogLog<H, P> {
     fn default() -> Self {
         Self::new()
     }
