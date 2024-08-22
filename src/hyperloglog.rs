@@ -5,8 +5,8 @@
 //! 1. https://github.com/crepererum/pdatastructs.rs/blob/3997ed50f6b6871c9e53c4c5e0f48f431405fc63/src/hyperloglog.rs
 //! 2. https://github.com/apache/arrow-datafusion/blob/f203d863f5c8bc9f133f6dd9b2e34e57ac3cdddc/datafusion/physical-expr/src/aggregate/hyperloglog.rs
 
-use std::hash::{Hash, Hasher};
 use ahash::AHasher;
+use std::hash::{Hash, Hasher};
 
 /// By default, we use 2**14 registers like redis
 const DEFAULT_P: usize = 14_usize;
@@ -18,12 +18,12 @@ const DEFAULT_P: usize = 14_usize;
 /// Register num is 1 << P
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
-pub struct HyperLogLog<H=AHasher, const P: usize = DEFAULT_P> {
+pub struct HyperLogLog<H = AHasher, const P: usize = DEFAULT_P> {
     pub(crate) registers: Vec<u8>,
     _hasher: std::marker::PhantomData<H>,
 }
 
-impl<H:  Default + Hasher, const P: usize> Default for HyperLogLog<H, P> {
+impl<H: Default + Hasher, const P: usize> Default for HyperLogLog<H, P> {
     fn default() -> Self {
         Self::new()
     }
@@ -47,7 +47,10 @@ impl<H: Default + Hasher, const P: usize> HyperLogLog<H, P> {
     pub fn with_registers(registers: Vec<u8>) -> Self {
         assert_eq!(registers.len(), Self::number_registers());
 
-        Self { registers, _hasher: std::marker::PhantomData }
+        Self {
+            registers,
+            _hasher: std::marker::PhantomData,
+        }
     }
 
     /// Adds an hash to the HyperLogLog.
