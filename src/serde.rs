@@ -101,11 +101,12 @@ impl<H: Default + Hasher, const P: usize> borsh::BorshDeserialize for HyperLogLo
 #[cfg(test)]
 mod tests {
     use crate::HyperLogLog;
+    use ahash::AHasher;
 
     const P: usize = 14;
     #[test]
     fn test_serde() {
-        let mut hll = HyperLogLog::<H, P>::new();
+        let mut hll = HyperLogLog::<AHasher, P>::new();
         json_serde_equal(&hll);
 
         for i in 0..100000 {
@@ -113,7 +114,7 @@ mod tests {
         }
         json_serde_equal(&hll);
 
-        let hll = HyperLogLog::<H, P>::with_registers(vec![1; 1 << P]);
+        let hll = HyperLogLog::<AHasher, P>::with_registers(vec![1; 1 << P]);
         json_serde_equal(&hll);
     }
 
