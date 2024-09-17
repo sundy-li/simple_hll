@@ -12,7 +12,7 @@ use std::hash::{Hash, Hasher};
 const DEFAULT_P: usize = 14_usize;
 
 /// HyperLogLog is a probabilistic data structure used to estimate the cardinality of a multiset.
-/// 
+///
 /// Note: We don't make HyperLogLog as static struct by keeping `PhantomData<T>`
 /// Callers should take care of its hash function to be unchanged.
 /// P is the bucket number, must be [4, 18]
