@@ -7,7 +7,7 @@ repository = "https://github.com/sundy-li/simple_hll"
 edition = "2021"
 license = "Apache-2.0"
 name = "simple_hll"
-version = "0.0.2"
+version = "0.0.3"
 
 
 [features]

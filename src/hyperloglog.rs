@@ -5,11 +5,8 @@
 //! 1. https://github.com/crepererum/pdatastructs.rs/blob/3997ed50f6b6871c9e53c4c5e0f48f431405fc63/src/hyperloglog.rs
 //! 2. https://github.com/apache/arrow-datafusion/blob/f203d863f5c8bc9f133f6dd9b2e34e57ac3cdddc/datafusion/physical-expr/src/aggregate/hyperloglog.rs
 
-use core::hash::Hash;
-
-use ahash::AHasher;
-
 use crate::Hasher;
+use core::hash::Hash;
 
 /// By default, we use 2**14 registers like redis
 const DEFAULT_P: usize = 14_usize;
@@ -19,27 +16,18 @@ const DEFAULT_P: usize = 14_usize;
 /// P is the bucket number, must be [4, 18]
 /// Q = 64 - P
 /// Register num is 1 << P
-#[derive(Clone, Debug)]
-pub struct HyperLogLog<H: Hasher = AHasher, const P: usize = DEFAULT_P> {
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HyperLogLog<const P: usize = DEFAULT_P> {
     pub(crate) registers: Vec<u8>,
-    _hasher: core::marker::PhantomData<H>,
 }
 
-impl<H: Hasher + Default, const P: usize> Default for HyperLogLog<H, P> {
+impl<const P: usize> Default for HyperLogLog<P> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<H: Hasher + Default, const P: usize> PartialEq for HyperLogLog<H, P> {
-    fn eq(&self, other: &Self) -> bool {
-        self.registers == other.registers
-    }
-}
-
-impl<H: Hasher + Default, const P: usize> Eq for HyperLogLog<H, P> {}
-
-impl<H: Hasher + Default, const P: usize> HyperLogLog<H, P> {
+impl<const P: usize> HyperLogLog<P> {
     /// note that this method should not be invoked in untrusted environment
     pub fn new() -> Self {
         assert!(
@@ -50,17 +38,13 @@ impl<H: Hasher + Default, const P: usize> HyperLogLog<H, P> {
 
         Self {
             registers: vec![0; 1 << P],
-            _hasher: core::marker::PhantomData,
         }
     }
 
     pub fn with_registers(registers: Vec<u8>) -> Self {
         assert_eq!(registers.len(), Self::number_registers());
 
-        Self {
-            registers,
-            _hasher: core::marker::PhantomData,
-        }
+        Self { registers }
     }
 
     /// Adds an hash to the HyperLogLog.
@@ -75,6 +59,11 @@ impl<H: Hasher + Default, const P: usize> HyperLogLog<H, P> {
     /// Adds an object to the HyperLogLog.
     /// Though we could pass different types into this method, caller should notice that
     pub fn add_object<T: Hash>(&mut self, obj: &T) {
+        self.add_object_by_hasher::<T, ahash::AHasher>(obj);
+    }
+
+    #[inline]
+    pub fn add_object_by_hasher<T: Hash, H: Hasher>(&mut self, obj: &T) {
         let hash = H::hll_hash(obj);
         self.add_hash(hash);
     }
@@ -200,7 +189,6 @@ mod tests {
     use crate::HyperLogLog;
 
     const P: usize = 14;
-    type DefaultHasher = ahash::AHasher;
     const NUM_REGISTERS: usize = 1 << P;
 
     fn compare_with_delta(got: usize, expected: usize) {
@@ -224,7 +212,7 @@ mod tests {
 
     macro_rules! sized_number_test {
         ($SIZE: expr, $T: tt) => {{
-            let mut hll = HyperLogLog::<DefaultHasher, P>::new();
+            let mut hll = HyperLogLog::<P>::new();
             for i in 0..$SIZE {
                 hll.add_object(&(i as $T));
             }
@@ -253,13 +241,13 @@ mod tests {
 
     #[test]
     fn test_empty() {
-        let hll = HyperLogLog::<DefaultHasher, P>::new();
+        let hll = HyperLogLog::<P>::new();
         assert_eq!(hll.count(), 0);
     }
 
     #[test]
     fn test_one() {
-        let mut hll = HyperLogLog::<DefaultHasher, P>::new();
+        let mut hll = HyperLogLog::<P>::new();
         hll.add_hash(1);
         assert_eq!(hll.count(), 1);
     }
@@ -291,19 +279,19 @@ mod tests {
 
     #[test]
     fn test_empty_merge() {
-        let mut hll = HyperLogLog::<DefaultHasher, P>::new();
-        hll.merge(&HyperLogLog::<DefaultHasher, P>::new());
+        let mut hll = HyperLogLog::<P>::new();
+        hll.merge(&HyperLogLog::<P>::new());
         assert_eq!(hll.count(), 0);
     }
 
     #[test]
     fn test_merge_overlapped() {
-        let mut hll = HyperLogLog::<DefaultHasher, P>::new();
+        let mut hll = HyperLogLog::<P>::new();
         for i in 0..1000 {
             hll.add_object(&i);
         }
 
-        let other = HyperLogLog::<DefaultHasher, P>::new();
+        let other = HyperLogLog::<P>::new();
         for i in 0..1000 {
             hll.add_object(&i);
         }
@@ -314,7 +302,7 @@ mod tests {
 
     #[test]
     fn test_repetition() {
-        let mut hll = HyperLogLog::<DefaultHasher, P>::new();
+        let mut hll = HyperLogLog::<P>::new();
         for i in 0..1_000_000 {
             hll.add_object(&(i % 1000));
         }
@@ -323,9 +311,9 @@ mod tests {
 
     macro_rules! custom_hasher_test {
         ($SIZE: expr, $H: ty, $T: tt) => {{
-            let mut hll = HyperLogLog::<$H, P>::new();
+            let mut hll = HyperLogLog::<P>::new();
             for i in 0..$SIZE {
-                hll.add_object(&(i as $T));
+                hll.add_object_by_hasher::<$T, $H>(&(i as $T));
             }
             compare_with_delta(hll.count(), $SIZE);
         }};
