@@ -81,14 +81,14 @@ impl<'de, const P: usize> serde::Deserialize<'de> for HyperLogLog<P> {
 }
 
 impl<const P: usize> borsh::BorshSerialize for HyperLogLog<P> {
-    fn serialize<W: std::io::prelude::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+    fn serialize<W: core::io::prelude::Write>(&self, writer: &mut W) -> core::io::Result<()> {
         let v: HyperLogLogVariantRef<'_, P> = self.into();
         v.serialize(writer)
     }
 }
 
 impl<const P: usize> borsh::BorshDeserialize for HyperLogLog<P> {
-    fn deserialize_reader<R: std::io::prelude::Read>(reader: &mut R) -> std::io::Result<Self> {
+    fn deserialize_reader<R: core::io::prelude::Read>(reader: &mut R) -> core::io::Result<Self> {
         let v = HyperLogLogVariant::<P>::deserialize_reader(reader)?;
         Ok(v.into())
     }

@@ -5,7 +5,7 @@
 //! 1. https://github.com/crepererum/pdatastructs.rs/blob/3997ed50f6b6871c9e53c4c5e0f48f431405fc63/src/hyperloglog.rs
 //! 2. https://github.com/apache/arrow-datafusion/blob/f203d863f5c8bc9f133f6dd9b2e34e57ac3cdddc/datafusion/physical-expr/src/aggregate/hyperloglog.rs
 
-use std::hash::Hash;
+use core::hash::Hash;
 
 use ahash::AHasher;
 
@@ -23,7 +23,7 @@ const DEFAULT_P: usize = 14_usize;
 #[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
 pub struct HyperLogLog<H: Hasher = AHasher, const P: usize = DEFAULT_P> {
     pub(crate) registers: Vec<u8>,
-    _hasher: std::marker::PhantomData<H>,
+    _hasher: core::marker::PhantomData<H>,
 }
 
 impl<H: Hasher + Default, const P: usize> Default for HyperLogLog<H, P> {
@@ -43,7 +43,7 @@ impl<H: Hasher + Default, const P: usize> HyperLogLog<H, P> {
 
         Self {
             registers: vec![0; 1 << P],
-            _hasher: std::marker::PhantomData,
+            _hasher: core::marker::PhantomData,
         }
     }
 
@@ -52,7 +52,7 @@ impl<H: Hasher + Default, const P: usize> HyperLogLog<H, P> {
 
         Self {
             registers,
-            _hasher: std::marker::PhantomData,
+            _hasher: core::marker::PhantomData,
         }
     }
 
@@ -326,7 +326,7 @@ mod tests {
 
     #[test]
     fn test_xxhash_hll() {
-        use std::hash::{BuildHasher, Hash};
+        use core::hash::{BuildHasher, Hash};
         #[derive(Default)]
         struct XXH3;
         impl crate::Hasher for XXH3 {
