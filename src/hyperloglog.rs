@@ -5,38 +5,41 @@
 //! 1. https://github.com/crepererum/pdatastructs.rs/blob/3997ed50f6b6871c9e53c4c5e0f48f431405fc63/src/hyperloglog.rs
 //! 2. https://github.com/apache/arrow-datafusion/blob/f203d863f5c8bc9f133f6dd9b2e34e57ac3cdddc/datafusion/physical-expr/src/aggregate/hyperloglog.rs
 
-use std::hash::Hash;
+use core::hash::Hash;
 
-use ahash::RandomState;
+use ahash::AHasher;
+
+use crate::Hasher;
 
 /// By default, we use 2**14 registers like redis
 const DEFAULT_P: usize = 14_usize;
-
-/// Fixed seed
-const SEED: RandomState = RandomState::with_seeds(
-    0x355e438b4b1478c7_u64,
-    0xd0e8453cd135b473_u64,
-    0xf7b252066a57836a_u64,
-    0xb8a829e3713c09bf_u64,
-);
 
 /// Note: We don't make HyperLogLog as static struct by keeping `PhantomData<T>`
 /// Callers should take care of its hash function to be unchanged.
 /// P is the bucket number, must be [4, 18]
 /// Q = 64 - P
 /// Register num is 1 << P
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct HyperLogLog<const P: usize = DEFAULT_P> {
+#[derive(Clone, Debug)]
+pub struct HyperLogLog<H: Hasher = AHasher, const P: usize = DEFAULT_P> {
     pub(crate) registers: Vec<u8>,
+    _hasher: core::marker::PhantomData<H>,
 }
 
-impl<const P: usize> Default for HyperLogLog<P> {
+impl<H: Hasher + Default, const P: usize> Default for HyperLogLog<H, P> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<const P: usize> HyperLogLog<P> {
+impl<H: Hasher + Default, const P: usize> PartialEq for HyperLogLog<H, P> {
+    fn eq(&self, other: &Self) -> bool {
+        self.registers == other.registers
+    }
+}
+
+impl<H: Hasher + Default, const P: usize> Eq for HyperLogLog<H, P> {}
+
+impl<H: Hasher + Default, const P: usize> HyperLogLog<H, P> {
     /// note that this method should not be invoked in untrusted environment
     pub fn new() -> Self {
         assert!(
@@ -47,13 +50,17 @@ impl<const P: usize> HyperLogLog<P> {
 
         Self {
             registers: vec![0; 1 << P],
+            _hasher: core::marker::PhantomData,
         }
     }
 
     pub fn with_registers(registers: Vec<u8>) -> Self {
         assert_eq!(registers.len(), Self::number_registers());
 
-        Self { registers }
+        Self {
+            registers,
+            _hasher: core::marker::PhantomData,
+        }
     }
 
     /// Adds an hash to the HyperLogLog.
@@ -68,7 +75,7 @@ impl<const P: usize> HyperLogLog<P> {
     /// Adds an object to the HyperLogLog.
     /// Though we could pass different types into this method, caller should notice that
     pub fn add_object<T: Hash>(&mut self, obj: &T) {
-        let hash = SEED.hash_one(obj);
+        let hash = H::hll_hash(obj);
         self.add_hash(hash);
     }
 
@@ -193,6 +200,7 @@ mod tests {
     use crate::HyperLogLog;
 
     const P: usize = 14;
+    type DefaultHasher = ahash::AHasher;
     const NUM_REGISTERS: usize = 1 << P;
 
     fn compare_with_delta(got: usize, expected: usize) {
@@ -216,7 +224,7 @@ mod tests {
 
     macro_rules! sized_number_test {
         ($SIZE: expr, $T: tt) => {{
-            let mut hll = HyperLogLog::<P>::new();
+            let mut hll = HyperLogLog::<DefaultHasher, P>::new();
             for i in 0..$SIZE {
                 hll.add_object(&(i as $T));
             }
@@ -245,13 +253,13 @@ mod tests {
 
     #[test]
     fn test_empty() {
-        let hll = HyperLogLog::<P>::new();
+        let hll = HyperLogLog::<DefaultHasher, P>::new();
         assert_eq!(hll.count(), 0);
     }
 
     #[test]
     fn test_one() {
-        let mut hll = HyperLogLog::<P>::new();
+        let mut hll = HyperLogLog::<DefaultHasher, P>::new();
         hll.add_hash(1);
         assert_eq!(hll.count(), 1);
     }
@@ -283,19 +291,19 @@ mod tests {
 
     #[test]
     fn test_empty_merge() {
-        let mut hll = HyperLogLog::<P>::new();
-        hll.merge(&HyperLogLog::<P>::new());
+        let mut hll = HyperLogLog::<DefaultHasher, P>::new();
+        hll.merge(&HyperLogLog::<DefaultHasher, P>::new());
         assert_eq!(hll.count(), 0);
     }
 
     #[test]
     fn test_merge_overlapped() {
-        let mut hll = HyperLogLog::<P>::new();
+        let mut hll = HyperLogLog::<DefaultHasher, P>::new();
         for i in 0..1000 {
             hll.add_object(&i);
         }
 
-        let other = HyperLogLog::<P>::new();
+        let other = HyperLogLog::<DefaultHasher, P>::new();
         for i in 0..1000 {
             hll.add_object(&i);
         }
@@ -306,10 +314,52 @@ mod tests {
 
     #[test]
     fn test_repetition() {
-        let mut hll = HyperLogLog::<P>::new();
+        let mut hll = HyperLogLog::<DefaultHasher, P>::new();
         for i in 0..1_000_000 {
             hll.add_object(&(i % 1000));
         }
         compare_with_delta(hll.count(), 1000);
+    }
+
+    macro_rules! custom_hasher_test {
+        ($SIZE: expr, $H: ty, $T: tt) => {{
+            let mut hll = HyperLogLog::<$H, P>::new();
+            for i in 0..$SIZE {
+                hll.add_object(&(i as $T));
+            }
+            compare_with_delta(hll.count(), $SIZE);
+        }};
+    }
+
+    #[test]
+    fn test_xxhash_hll() {
+        use core::hash::{BuildHasher, Hash};
+        #[derive(Default)]
+        struct XXH3;
+        impl crate::Hasher for XXH3 {
+            fn hll_hash<T: Hash>(x: T) -> u64 {
+                let builder = xxhash_rust::xxh3::Xxh3Builder::default();
+                builder.hash_one(x)
+            }
+        }
+
+        #[derive(Default)]
+        struct XXH3WithSeed;
+        const SEED: u64 = 0x1234_5678_u64;
+
+        impl crate::Hasher for XXH3WithSeed {
+            fn hll_hash<T: Hash>(x: T) -> u64 {
+                let builder = xxhash_rust::xxh3::Xxh3Builder::default().with_seed(SEED);
+                builder.hash_one(x)
+            }
+        }
+
+        custom_hasher_test!(1000, XXH3, u16);
+        custom_hasher_test!(1000, XXH3, i32);
+        custom_hasher_test!(1000, XXH3, i64);
+
+        custom_hasher_test!(1000, XXH3WithSeed, u16);
+        custom_hasher_test!(1000, XXH3WithSeed, i32);
+        custom_hasher_test!(1000, XXH3WithSeed, i64);
     }
 }
