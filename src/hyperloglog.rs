@@ -20,7 +20,6 @@ const DEFAULT_P: usize = 14_usize;
 /// Q = 64 - P
 /// Register num is 1 << P
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "mem_dbg", derive(mem_dbg::MemSize, mem_dbg::MemDbg))]
 pub struct HyperLogLog<H: Hasher = AHasher, const P: usize = DEFAULT_P> {
     pub(crate) registers: Vec<u8>,
     _hasher: core::marker::PhantomData<H>,
