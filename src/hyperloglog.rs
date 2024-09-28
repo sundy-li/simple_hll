@@ -19,7 +19,7 @@ const DEFAULT_P: usize = 14_usize;
 /// P is the bucket number, must be [4, 18]
 /// Q = 64 - P
 /// Register num is 1 << P
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct HyperLogLog<H: Hasher = AHasher, const P: usize = DEFAULT_P> {
     pub(crate) registers: Vec<u8>,
     _hasher: core::marker::PhantomData<H>,
@@ -30,6 +30,14 @@ impl<H: Hasher + Default, const P: usize> Default for HyperLogLog<H, P> {
         Self::new()
     }
 }
+
+impl<H: Hasher + Default, const P: usize> PartialEq for HyperLogLog<H, P> {
+    fn eq(&self, other: &Self) -> bool {
+        self.registers == other.registers
+    }
+}
+
+impl<H: Hasher + Default, const P: usize> Eq for HyperLogLog<H, P> {}
 
 impl<H: Hasher + Default, const P: usize> HyperLogLog<H, P> {
     /// note that this method should not be invoked in untrusted environment
