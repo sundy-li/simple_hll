@@ -326,16 +326,13 @@ mod tests {
 
     #[test]
     fn test_xxhash_hll() {
-        use std::hash::{BuildHasher, Hash, Hasher};
+        use std::hash::{BuildHasher, Hash};
         #[derive(Default)]
         struct XXH3;
         impl crate::Hasher for XXH3 {
             fn hll_hash<T: Hash>(x: T) -> u64 {
                 let builder = xxhash_rust::xxh3::Xxh3Builder::default();
-                let mut hasher = builder.build_hasher();
-
-                x.hash(&mut hasher);
-                hasher.finish()
+                builder.hash_one(x)
             }
         }
 
@@ -346,10 +343,7 @@ mod tests {
         impl crate::Hasher for XXH3WithSeed {
             fn hll_hash<T: Hash>(x: T) -> u64 {
                 let builder = xxhash_rust::xxh3::Xxh3Builder::default().with_seed(SEED);
-                let mut hasher = builder.build_hasher();
-
-                x.hash(&mut hasher);
-                hasher.finish()
+                builder.hash_one(x)
             }
         }
 
