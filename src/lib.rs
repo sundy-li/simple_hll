@@ -8,7 +8,7 @@ pub use hyperloglog::HyperLogLog;
 
 use core::hash::Hash;
 pub trait Hasher {
-    fn hash_one<T: Hash>(x: T) -> u64
+    fn hll_hash<T: Hash>(x: T) -> u64
     where
         Self: Sized;
 }
@@ -22,7 +22,7 @@ const SEED: RandomState = RandomState::with_seeds(
 );
 
 impl Hasher for ahash::AHasher {
-    fn hash_one<T: Hash>(x: T) -> u64 {
+    fn hll_hash<T: Hash>(x: T) -> u64 {
         SEED.hash_one(x)
     }
 }

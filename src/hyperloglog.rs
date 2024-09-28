@@ -68,7 +68,7 @@ impl<H: Hasher + Default, const P: usize> HyperLogLog<H, P> {
     /// Adds an object to the HyperLogLog.
     /// Though we could pass different types into this method, caller should notice that
     pub fn add_object<T: Hash>(&mut self, obj: &T) {
-        let hash = H::hash_one(obj);
+        let hash = H::hll_hash(obj);
         self.add_hash(hash);
     }
 
@@ -330,7 +330,7 @@ mod tests {
         #[derive(Default)]
         struct XXH3;
         impl crate::Hasher for XXH3 {
-            fn hash_one<T: Hash>(x: T) -> u64 {
+            fn hll_hash<T: Hash>(x: T) -> u64 {
                 let builder = xxhash_rust::xxh3::Xxh3Builder::default();
                 let mut hasher = builder.build_hasher();
 
@@ -344,7 +344,7 @@ mod tests {
         const SEED: u64 = 0x1234_5678_u64;
 
         impl crate::Hasher for XXH3WithSeed {
-            fn hash_one<T: Hash>(x: T) -> u64 {
+            fn hll_hash<T: Hash>(x: T) -> u64 {
                 let builder = xxhash_rust::xxh3::Xxh3Builder::default().with_seed(SEED);
                 let mut hasher = builder.build_hasher();
 
