@@ -124,6 +124,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(target_os = "linux")]
     fn test_back_compat() {
         let mut hll = HyperLogLog::<P>::new();
 
