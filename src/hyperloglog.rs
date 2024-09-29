@@ -9,7 +9,7 @@ use crate::Hasher;
 use core::hash::Hash;
 
 /// By default, we use 2**14 registers like redis
-const DEFAULT_P: usize = 14_usize;
+pub const DEFAULT_P: usize = 14_usize;
 
 /// Note: We don't make HyperLogLog as static struct by keeping `PhantomData<T>`
 /// Callers should take care of its hash function to be unchanged.

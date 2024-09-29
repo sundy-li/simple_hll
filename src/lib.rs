@@ -4,7 +4,9 @@ mod hyperloglog;
 mod serde;
 
 use ahash::RandomState;
-pub use hyperloglog::HyperLogLog;
+use hyperloglog::DEFAULT_P;
+
+pub type HyperLogLog<const P: usize = DEFAULT_P> = hyperloglog::HyperLogLog<P>;
 
 use core::hash::Hash;
 pub trait Hasher {

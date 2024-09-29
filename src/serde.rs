@@ -99,7 +99,6 @@ mod tests {
     use crate::HyperLogLog;
 
     const P: usize = 14;
-    type H = ahash::AHasher;
 
     #[test]
     fn test_serde() {
@@ -122,5 +121,27 @@ mod tests {
         let val = serde_json::to_vec(t).unwrap();
         let new_t: T = serde_json::from_slice(&val).unwrap();
         assert!(t == &new_t)
+    }
+
+    #[test]
+    fn test_back_compat() {
+        let mut hll = HyperLogLog::<P>::new();
+
+        for i in 0..1000000 {
+            hll.add_object(&i);
+        }
+
+        for i in 0..1000000 {
+            hll.add_object(&i);
+        }
+
+        let s: u64 = hll.registers.iter().map(|x| *x as u64).sum();
+        assert_eq!(s, 118702);
+
+        for i in 0..2000000 {
+            hll.add_object(&i);
+        }
+        let s: u64 = hll.registers.iter().map(|x| *x as u64).sum();
+        assert_eq!(s, 135525);
     }
 }
