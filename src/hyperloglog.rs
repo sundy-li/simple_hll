@@ -52,8 +52,13 @@ impl<const P: usize> HyperLogLog<P> {
     #[inline]
     pub fn add_hash(&mut self, hash: u64) {
         let index = (hash & Self::register_mask()) as usize;
-        let one_position = ((hash >> P) | (1_u64 << Self::q())).trailing_zeros() + 1;
-        self.registers[index] = self.registers[index].max(one_position as u8);
+        let one_position = (((hash >> P) | (1_u64 << Self::q())).trailing_zeros() + 1) as u8;
+        unsafe {
+            let val = self.registers.get_unchecked_mut(index);
+            if *val < one_position {
+                *val = one_position;
+            }
+        }
     }
 
     /// Adds an object to the HyperLogLog.
@@ -132,12 +137,16 @@ impl<const P: usize> HyperLogLog<P> {
     pub fn num_empty_registers(&self) -> usize {
         self.registers.iter().filter(|x| **x == 0).count()
     }
+
+    #[inline]
+    pub fn get_registers(&self) -> &[u8] {
+        &self.registers
+    }
 }
 
 /// Helper function sigma as defined in
 /// "New cardinality estimation algorithms for HyperLogLog sketches"
 /// Otmar Ertl, https://arxiv.org/abs/1702.01284
-#[allow(dead_code)]
 #[inline]
 fn hll_sigma(x: f64) -> f64 {
     if x == 1. {
