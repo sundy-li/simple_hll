@@ -32,8 +32,7 @@ impl<const P: usize> HyperLogLog<P> {
     pub fn new() -> Self {
         assert!(
             (P >= 4) & (P <= 18),
-            "P ({}) must be larger or equal than 4 and smaller or equal than 18",
-            P
+            "P ({P}) must be larger or equal than 4 and smaller or equal than 18",
         );
 
         Self {
