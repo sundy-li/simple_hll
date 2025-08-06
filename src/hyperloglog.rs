@@ -58,12 +58,12 @@ impl<const P: usize> HyperLogLog<P> {
 
     /// Adds an object to the HyperLogLog.
     /// Though we could pass different types into this method, caller should notice that
-    pub fn add_object<T: Hash>(&mut self, obj: &T) {
+    pub fn add_object<T: ?Sized + Hash>(&mut self, obj: &T) {
         self.add_object_by_hasher::<T, ahash::AHasher>(obj);
     }
 
     #[inline]
-    pub fn add_object_by_hasher<T: Hash, H: Hasher>(&mut self, obj: &T) {
+    pub fn add_object_by_hasher<T: ?Sized + Hash, H: Hasher>(&mut self, obj: &T) {
         let hash = H::hll_hash(obj);
         self.add_hash(hash);
     }
